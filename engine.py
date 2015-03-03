@@ -9,29 +9,28 @@ from oauth2client.tools import run
 from apiclient import errors
 
 import re
-import redis
 import pprint
+import dbinterface as db
 
 # Set up pretty printer
 pp = pprint.PrettyPrinter()
 
-# Connect to Redis
-r = redis.StrictRedis(host='localhost', port=6379, db=0, password="REPLACE_ME")
-
-# Get whitelist array from Redis
-whitelist = r.lrange('whitelist', 0, -1)
+# Get whitelist array from RethinkDB
+whitelist = db.get_whitelist('email')
 print '\n+++ Printing email whitelist'
 print whitelist
 
-# Get threads array from Redis
-threads = r.lrange('threads', 0, -1)
+# Get threads array from DB
+thread_whitelist = db.get_whitelist('thread')
 print '\n+++ Printing thread approvals'
-print threads
+print thread_whitelist
 
 # Set my email address
+# TODO: auto-discover
 ME_EMAIL = 'mark@markbao.com'
 
 # Set label IDs
+# TODO: auto-discover and maybe save
 LABEL_INBOX = 'INBOX'
 LABEL_PROCESSING = 'Label_137'
 LABEL_NONESSENTIAL = 'Label_138'
@@ -61,6 +60,7 @@ http = credentials.authorize(http)
 gmail_service = build('gmail', 'v1', http=http)
 
 # Gmail functions from Google sample library, modified to use gmail_service
+# TODO: Refactor Gmail functions to another place
 
 def ListThreadsMatchingQuery(query=''):
   """List all Threads of the user's mailbox matching the query.
@@ -224,8 +224,8 @@ def ProcessMessageSignals(email_subject, email_thread_from, email_thread_id, ema
       judgment = 'essential'
 
     # Thread signal - Check thread against thread database
-    if email_thread_id in threads:
-      print 'Found thread %s in threads' % email_thread_id
+    if email_thread_id in thread_whitelist:
+      print 'Found thread %s in thread_whitelist' % email_thread_id
       return 'essential'
 
     # TODO - add word signal (e.g. urgent, important, etc.)
@@ -245,10 +245,10 @@ for thread in moved_threads:
 
   print 'Processing thread %s' % thread_id
 
-  if thread_id not in threads:
+  if thread_id not in thread_whitelist:
     # Authorization for thread in database
-    threads.append(thread_id)
-    r.rpush('threads', thread_id)
+    thread_whitelist.add(thread_id)
+    db.whitelist_thread(thread_id)
     print 'Pushed %s to approved threads list' % thread_id
 
     # Remove Nonessential label

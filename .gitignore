@@ -1,5 +1,6 @@
 gmail.storage
 client_secret.json
+db
 
 # Virtualenv
 .Python
