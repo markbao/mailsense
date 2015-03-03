@@ -1,9 +1,5 @@
 gmail.storage
 client_secret.json
-redis/appendonly.aof
-redis/dump.rdb
-redis/redis.conf
-dump.rdb
 
 # Virtualenv
 .Python
