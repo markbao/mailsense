@@ -39,10 +39,4 @@ This will pop up Google OAuth in your browser, allowing you to authenticate.
 
 TODO: Complete the rest of this
 
-## TODO
-
-- Auto-discover label IDs so we don't have to hard-code them
-- Auto-discover current user email address so we don't have to hard-code it
-- Add password/passkey to the server to be included in emails sent out
-
 ©2015 Mark Bao. Withholding source license for now.
