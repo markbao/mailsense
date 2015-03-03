@@ -5,14 +5,13 @@ import os
 env = os.getenv('ENV', 'dev')
 print 'Running in env %s' % env
 
-# Connect to Redis
-r = redis.StrictRedis(host='localhost', port=6379, db=0, password="REPLACE_ME")
+import dbinterface as db
 
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-  return "emailsrv"
+  return "Mailsense Server"
 
 @app.route('/add', methods=['GET', 'POST'])
 def add():
@@ -22,12 +21,8 @@ def add():
   if request.method == 'GET':
     email = request.args.get('email', '')
 
-  # refresh whitelist 
-  whitelist = r.lrange('whitelist', 0, -1)
-
   # find email
-  if email not in whitelist:
-    r.rpush('whitelist', email)
+  if db.whitelist_email(email):
     return 'ADD: pushed %s to whitelist' % email
   else:
     return 'ADD: %s already in whitelist' % email
@@ -40,12 +35,8 @@ def delete():
   if request.method == 'GET':
     email = request.args.get('email', '')
 
-  # refresh whitelist 
-  whitelist = r.lrange('whitelist', 0, -1)
-
   # find email
-  if email in whitelist:
-    r.lrem('whitelist', 0, email)
+  if db.whitelist_email_delete(email):
     return 'DELETE: removed %s from whitelist' % email
   else:
     return 'DELETE: %s not in whitelist' % email

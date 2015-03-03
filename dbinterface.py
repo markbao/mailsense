@@ -23,7 +23,7 @@ def whitelist_email(email):
 
   if num == 0:
     # Insert
-    db.table('email_whitelist').insert({'email': email}).run()
+    db.table('email_whitelist').insert({'email': email, 'created_at': r.now()}).run()
     return True
   else:
     return False
@@ -38,3 +38,12 @@ def whitelist_thread(thread_id):
     return True
   else:
     return False
+
+def whitelist_email_delete(email):
+  # Check for existence of email in DB
+  result = db.table('email_whitelist').get_all(email, index='email').delete().run()
+
+  if result['deleted'] == 0:
+    return False
+  else:
+    return True
