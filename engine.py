@@ -199,36 +199,49 @@ def ProcessMessageSignals(email_subject, email_thread_from, email_thread_id, ema
   # TODO: Think about processing all other available emails
 
   judgment = 'nonessential'
+  print 'email_thread_from: ' + email_thread_from
+  print 'email_message_from: ' + email_message_from
 
   # Find sender email in from field
-  thread_from = re.search(r'[\w\.-]+@[\w\.-]+', email_thread_from).group(0)
-  message_from = re.search(r'[\w\.-]+@[\w\.-]+', email_message_from).group(0)
-
-  print 'Processing %s with thread ID %s...' % (thread_from, email_thread_id)
-
-  # Sent signal - Check if the latest message's sender is me
-  if message_from == ME_EMAIL:
-    # Sent message - overrides all
-    print 'Sent from me'
-    judgment = 'sent'
+  thread_from_re = re.search(r'[\w\.-]+@[\w\.-]+', email_thread_from)
+  message_from_re = re.search(r'[\w\.-]+@[\w\.-]+', email_message_from)
+  
+  thread_from = ""
+  message_from = ""
+  processing_failed = False
+  
+  if thread_from_re == None or message_from_re == None:
+    # Regex failed; leave mail in Processing
+    processing_failed = True
+    judgment = 'error'
   else:
-    # Sender signal - Check sender against whitelist
-    if thread_from in whitelist:
-      # All good, approved
-      print 'Found in whitelist'
-      judgment = 'essential'
+    thread_from = thread_from_re.group(0)
+    message_from = message_from_re.group(0)
+    print 'Processing %s with thread ID %s...' % (thread_from, email_thread_id)
 
-    # Domain signal - Check sender's domain against whitelist
-    if re.search("@[\w.]+", thread_from).group() in whitelist:
-      print 'Found domain in whitelist'
-      judgment = 'essential'
+    # Sent signal - Check if the latest message's sender is me
+    if message_from == ME_EMAIL:
+      # Sent message - overrides all
+      print 'Sent from me'
+      judgment = 'sent'
+    else:
+      # Sender signal - Check sender against whitelist
+      if thread_from in whitelist:
+        # All good, approved
+        print 'Found in whitelist'
+        judgment = 'essential'
 
-    # Thread signal - Check thread against thread database
-    if email_thread_id in thread_whitelist:
-      print 'Found thread %s in thread_whitelist' % email_thread_id
-      return 'essential'
+      # Domain signal - Check sender's domain against whitelist
+      if re.search("@[\w.]+", thread_from).group() in whitelist:
+        print 'Found domain in whitelist'
+        judgment = 'essential'
 
-    # TODO - add word signal (e.g. urgent, important, etc.)
+      # Thread signal - Check thread against thread database
+      if email_thread_id in thread_whitelist:
+        print 'Found thread %s in thread_whitelist' % email_thread_id
+        return 'essential'
+
+      # TODO - add word signal (e.g. urgent, important, etc.)
 
   return judgment
 
@@ -274,8 +287,8 @@ for thread in processing_threads:
 
   # Get sender, subject, and from of first message
   subject = next((item['value'] for item in th['messages'][0]['payload']['headers'] if item['name'] == 'Subject'), None)
-  thread_from = next((item['value'] for item in th['messages'][0]['payload']['headers'] if item['name'] == 'From'), None)
-  last_message_from = next((item['value'] for item in th['messages'][-1]['payload']['headers'] if item['name'] == 'From'), None)
+  thread_from = next((item['value'] for item in th['messages'][0]['payload']['headers'] if item['name'] == 'From'), next((item['value'] for item in th['messages'][0]['payload']['headers'] if item['name'] == 'from'), None))
+  last_message_from = next((item['value'] for item in th['messages'][-1]['payload']['headers'] if item['name'] == 'From'), next((item['value'] for item in th['messages'][-1]['payload']['headers'] if item['name'] == 'from'), None))
 
   judgment = ProcessMessageSignals(subject, thread_from, thread_id, last_message_from)
 
@@ -295,8 +308,8 @@ for thread in processing_threads:
 
     # Remove Processing message and let it be in Sent
     ModifyThread(thread['id'], {'removeLabelIds': [LABEL_PROCESSING]})
-  elif judgment == 'nonessential':
-    print 'JUDGMENT: nonessential'
+  elif judgment == 'nonessential' or judgment == 'error':
+    print 'JUDGMENT: ' + judgment
 
     # Remove Processing label, archive, and move to Nonessential
     ModifyThread(thread['id'], {'removeLabelIds': [LABEL_PROCESSING, LABEL_INBOX], 'addLabelIds': [LABEL_NONESSENTIAL]})
