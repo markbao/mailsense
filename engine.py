@@ -12,6 +12,8 @@ import re
 import pprint
 import dbinterface as db
 
+import requests
+
 # Set up pretty printer
 pp = pprint.PrettyPrinter()
 
@@ -196,11 +198,14 @@ def ModifyMessage(msg_id, msg_labels):
     print 'An error occurred: %s' % error
 
 def ProcessMessageSignals(email_subject, email_thread_from, email_thread_id, email_message_from):
+  if email_thread_from is None:
+    return 'nonessential'
+  
   # TODO: Think about processing all other available emails
 
   judgment = 'nonessential'
-  print 'email_thread_from: ' + email_thread_from
-  print 'email_message_from: ' + email_message_from
+  print 'email_thread_from: ' + email_thread_from.encode('utf-8')
+  print 'email_message_from: ' + email_message_from.encode('utf-8')
 
   # Find sender email in from field
   thread_from_re = re.search(r'[\w\.-]+@[\w\.-]+', email_thread_from)
